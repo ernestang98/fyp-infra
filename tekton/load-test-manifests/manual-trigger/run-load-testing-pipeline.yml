@@ -1,0 +1,52 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: run-load-testing-pipeline
+spec:
+  serviceAccountName: git-secrets-sa
+  pipelineRef:
+    name: load-testing-pipeline
+  params:
+    - name: AUDIO_DURATION
+      value: "$AUDIO_DURATION"
+    - name: SERVER_HOST
+      value: $SERVER_HOST
+    - name: SERVER_PORT
+      value: $SERVER_PORT
+    - name: TO_STREAM_TO_INFLUX_DB
+      value: "$TO_STREAM_TO_INFLUX_DB"
+    - name: INFLUX_DB_HOST
+      value: "$INFLUX_DB_HOST"
+    - name: INFLUX_DB_PORT
+      value: $INFLUX_DB_PORT # fixed
+    - name: INFLUX_DB_USERNAME
+      value: "$INFLUX_DB_USERNAME"
+    - name: INFLUX_DB_PASSWORD
+      value: "$INFLUX_DB_PASSWORD"
+    - name: REPORTS_BUCKET
+      value: "$REPORTS_BUCKET"
+    - name: SEND_MAIL_SECRETS
+      value: sendmail-secret
+    - name: SEND_MAIL_SUBJECTS
+      value: "Load Test Tekton Pipeline Completed"
+    - name: SEND_MAIL_BODY
+      value: "Your load testing report has been uploaded"
+    - name: SEND_MAIL_SENDER
+      value: "$SEND_MAIL_SENDER"
+    - name: SEND_MAIL_RECIPIENTS
+      value: "$SEND_MAIL_RECIPIENTS"
+    - name: SLACK_WEBHOOK_SECRET
+      value: "webhook-secret"
+    - name: SLACK_MESSAGE
+      value: "Your load testing report has been uploaded"
+  workspaces:
+    - name: load-testing-pipeline-ws
+      volumeClaimTemplate:
+        metadata:
+          name: pipeline-pvc
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi

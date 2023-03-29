@@ -1,0 +1,33 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: sast-task
+spec:
+  workspaces:
+    - name: output
+  params:
+    - name: name
+      type: string
+  steps:
+    - name: install-and-run-semgrep
+      image: ubuntu
+      script: |
+        #!/usr/bin/env bash
+        apt update -y
+        apt install python3 -y
+        apt install python3-pip -y
+        pip3 install semgrep
+        echo "Running 'semgrep -d $(workspaces.output.path)/$(params.name)'"
+        semgrep --config=auto "$(workspaces.output.path)/$(params.name)" --json --output=$(workspaces.output.path)/output/default-semgrep-rules-report.json
+        echo "Running 'semgrep -d $(workspaces.output.path)/$(params.name)' with our rules in $(workspaces.output.path)/$(params.name)/devsecops/semgrep"
+        semgrep --config=$(workspaces.output.path)/$(params.name)/devsecops/semgrep "$(workspaces.output.path)/$(params.name)" --json --output=$(workspaces.output.path)/output/custom-semgrep-rules-report.json
+    - name: install-and-run-checkov
+      image: ubuntu
+      script: |
+        #!/usr/bin/env bash
+        apt update -y
+        apt install python3 -y
+        apt install python3-pip -y
+        pip3 install checkov
+        echo "Running 'checkov -d $(workspaces.output.path)/$(params.name)'"
+        checkov -d "$(workspaces.output.path)/$(params.name)" --check LOW --skip-download -o=json > $(workspaces.output.path)/output/checkov-report.json

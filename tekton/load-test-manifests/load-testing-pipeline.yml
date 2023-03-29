@@ -1,0 +1,143 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: load-testing-pipeline
+spec:
+  params:
+  - name: AUDIO_DURATION
+    type: string
+  - name: SERVER_HOST
+    type: string
+  - name: SERVER_PORT
+    type: string
+  - name: TO_STREAM_TO_INFLUX_DB
+    type: string
+    default: "False"
+  - name: INFLUX_DB_HOST
+    type: string
+    default: "0.0.0.0"
+  - name: INFLUX_DB_PORT
+    type: string
+    default: "0"
+  - name: INFLUX_DB_USERNAME
+    type: string
+    default: ""
+  - name: INFLUX_DB_PASSWORD
+    type: string
+    default: ""
+  - name: PATH
+    type: string
+    default: "fyp-backup"
+  - name: REPORTS_BUCKET
+    type: string
+  - name: SEND_MAIL_SECRETS
+    type: string
+  - name: SEND_MAIL_SUBJECTS
+    type: string
+  - name: SEND_MAIL_BODY
+    type: string
+  - name: SEND_MAIL_SENDER
+    type: string
+  - name: SEND_MAIL_RECIPIENTS
+    type: string
+  - name: SLACK_WEBHOOK_SECRET
+    type: string
+  - name: SLACK_MESSAGE
+    type: string
+  workspaces:
+    - name: load-testing-pipeline-ws
+      description: Workspace for sharing files between tasks
+  tasks:
+    - name: clone-repository
+      params:
+        - name: url
+          value: https://github.com/ernestang98/fyp-backup.git
+        - name: revision
+          value: master
+      taskRef:
+        name: git-clone
+      workspaces:
+        - name: output
+          workspace: load-testing-pipeline-ws
+    - name: k6-without-streaming-to-influx-db
+      when:
+        - input: "$(params.TO_STREAM_TO_INFLUX_DB)"
+          operator: notin
+          values: ["True"]
+      params:
+        - name: SERVER_HOST
+          value: $(params.SERVER_HOST)
+        - name: SERVER_PORT
+          value: $(params.SERVER_PORT)
+        - name: PATH
+          value: $(params.PATH)  
+        - name: AUDIO_DURATION
+          value: $(params.AUDIO_DURATION)
+      runAfter:
+        - clone-repository
+      taskRef:
+        name: load-task
+      workspaces:
+        - name: output
+          workspace: load-testing-pipeline-ws
+    - name: k6-streaming-to-influx-db
+      when:
+        - input: "$(params.TO_STREAM_TO_INFLUX_DB)"
+          operator: in
+          values: ["True"]
+      params:
+        - name: SERVER_HOST
+          value: $(params.SERVER_HOST)
+        - name: SERVER_PORT
+          value: $(params.SERVER_PORT)
+        - name: INFLUX_DB_HOST
+          value: $(params.INFLUX_DB_HOST)
+        - name: INFLUX_DB_PORT
+          value: $(params.INFLUX_DB_PORT)
+        - name: INFLUX_DB_USERNAME
+          value: $(params.INFLUX_DB_USERNAME)
+        - name: INFLUX_DB_PASSWORD
+          value: $(params.INFLUX_DB_PASSWORD)  
+        - name: PATH
+          value: $(params.PATH)      
+        - name: AUDIO_DURATION
+          value: $(params.AUDIO_DURATION)
+      runAfter:
+        - clone-repository
+      taskRef:
+        name: load-task-to-influx-db
+      workspaces:
+        - name: output
+          workspace: load-testing-pipeline-ws
+  finally:
+    - name: upload-k6-report-to-s3-bucket
+      params:
+        - name: REPORTS_BUCKET
+          value: $(params.REPORTS_BUCKET)
+      taskRef:
+        name: aws-cli
+      workspaces:
+        - name: source
+          workspace: load-testing-pipeline-ws
+    - name: notify-team-via-email
+      params:
+        - name: server
+          value: $(params.SEND_MAIL_SECRETS)
+        - name: subject
+          value: $(params.SEND_MAIL_SUBJECTS)
+        - name: body
+          value: $(params.SEND_MAIL_BODY)
+        - name: sender
+          value: $(params.SEND_MAIL_SENDER)
+        - name: recipients
+          value: $(params.SEND_MAIL_RECIPIENTS)
+      taskRef:
+        name: sendmail
+    - name: notify-team-via-slack
+      params:
+        - name: webhook-secret
+          value: $(params.SLACK_WEBHOOK_SECRET)
+        - name: message
+          value: $(params.SLACK_MESSAGE)
+      taskRef:
+        name: send-to-webhook-slack

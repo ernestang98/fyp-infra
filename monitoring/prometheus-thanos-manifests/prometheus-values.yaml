@@ -1,0 +1,33 @@
+---
+prometheus:
+  prometheusSpec:
+    storageSpec:
+      volumeClaimTemplate:
+         spec:
+           accessModes: ["ReadWriteOnce"]
+           resources:
+             requests:
+               storage: 1Gi
+    replicas: 3
+    thanos:
+      objectStorageConfig:
+        key: thanos.yaml
+        name: thanos-objstore-config
+  thanosService:
+    enabled: true
+grafana:
+  env:
+    GF_SERVER_ROOT_URL: http://$INGRESS/grafana
+    GF_SERVER_SERVE_FROM_SUB_PATH: 'true'
+  adminPassword: $PASSWORD
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      nginx.ingress.kubernetes.io/rewrite-target: /$2
+    hosts: ['$INGRESS']
+    path: "/grafana(/|$)(.*)"
+    # tls:
+    # - secretName: tls-credential
+    #   hosts:
+    #   - k3s.local

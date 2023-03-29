@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: decoding-sdk-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      worker.service: decoding-sdk-worker
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        worker.service: decoding-sdk-worker
+    spec:
+      containers:
+        - args:
+            - /home/speechuser/start_worker.sh
+          env:
+            - name: MASTER
+              value: decoding-sdk-server:8010
+            - name: MODEL_DIR
+              value: english
+            - name: INSTANCE_NUM
+              value: "2"
+          image: lyvt/decoding-sdk:1.2
+          imagePullPolicy: Always
+          name: decoding-sdk-worker
+          volumeMounts:
+            - mountPath: /opt/models/
+              name: decoding-sdk-worker-claim
+          resources: 
+            requests:
+              cpu: 500m
+              memory: 6Gi
+            limits:
+              cpu: 1000m       
+              memory: 6Gi
+      restartPolicy: Always
+      volumes:
+        - name: decoding-sdk-worker-claim
+          persistentVolumeClaim:
+            claimName: decoding-sdk-worker-claim
+

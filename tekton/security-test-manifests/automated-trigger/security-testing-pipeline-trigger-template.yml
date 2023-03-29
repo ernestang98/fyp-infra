@@ -1,0 +1,55 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: trigger-devsecops-pipeline-template
+  annotations:
+    triggers.tekton.dev/old-escape-quotes: "true"
+spec:
+  params:
+    - name: commits
+      description: The commits which got pushed
+    - name: gitRepository
+      description: The git repository that hosts context
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        generateName: run-devsecops-pipeline-
+        annotations:
+          tekton.dev/gitURL: "$(tt.params.gitRepository)"
+      spec:
+        serviceAccountName: git-secrets-sa
+        pipelineRef:
+          name: devsecops-pipeline
+        params:
+          - name: DEFECT_DOJO_HOST
+            value: "$DEFECT_DOJO_HOST"
+          - name: DEFECT_DOJO_PORT
+            value: "$DEFECT_DOJO_PORT"
+          - name: DEFECT_DOJO_PASS
+            value: "$DEFECT_DOJO_PASS"
+          - name: SEND_MAIL_SECRETS
+            value: sendmail-secret
+          - name: SEND_MAIL_SUBJECTS
+            value: "Load Test Tekton Pipeline Completed"
+          - name: SEND_MAIL_BODY
+            value: "Your security testing report has been uploaded"
+          - name: SEND_MAIL_SENDER
+            value: "$SEND_MAIL_SENDER"
+          - name: SEND_MAIL_RECIPIENTS
+            value: "$SEND_MAIL_RECIPIENTS"
+          - name: SLACK_WEBHOOK_SECRET
+            value: "webhook-secret"
+          - name: SLACK_MESSAGE
+            value: "Your security testing report has been uploaded"
+        workspaces:
+          - name: devsecops-pipeline-ws
+            volumeClaimTemplate:
+              metadata:
+                name: pipeline-pvc
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 1Gi

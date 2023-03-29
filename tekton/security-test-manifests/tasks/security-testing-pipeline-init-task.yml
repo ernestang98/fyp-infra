@@ -1,0 +1,14 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: init-task
+spec:
+  workspaces:
+    - name: output
+  steps:
+    - name: create-report-folder
+      image: ubuntu
+      script: |
+        #!/usr/bin/env bash
+        ls $(workspaces.output.path)
+        mkdir $(workspaces.output.path)/output

@@ -1,0 +1,44 @@
+objstoreConfig: |-
+  type: "S3"
+  config:
+    bucket: "$BUCKET_NAME"
+    endpoint: "$MINIO_IP:$MINIO_PORT"
+    access_key: "$MINIO_ACCESS_KEY"
+    secret_key: "$MINIO_SECRET_KEY"
+    insecure: true
+
+query:
+  enabled: true
+  dnsDiscovery:
+    sidecarsService: prometheus-operated
+    sidecarsNamespace: monitoring
+
+queryFrontend:
+  enabled: true
+
+bucketweb:
+  enabled: true
+  refresh: "10m"
+
+compactor:
+  enabled: true
+  persistence:
+    size: "10Gi"
+    existingClaim: ""
+
+storegateway:
+  enabled: true
+  persistence:
+    size: "10Gi"
+    existingClaim: ""
+
+ruler:
+  enabled: false
+
+receive:
+  enabled: false
+
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true

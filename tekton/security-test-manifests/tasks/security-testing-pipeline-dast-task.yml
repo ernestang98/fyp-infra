@@ -1,0 +1,17 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: dast-task
+spec:
+  workspaces:
+    - name: output
+  params:
+    - name: name
+      type: string
+  steps:
+    - name: install-and-run-zap
+      image: ubuntu
+      script: |
+        #!/usr/bin/env bash
+        echo "Running Dynamic Application Security Testing with OWASP ZAP"
+        mv $(workspaces.output.path)/$(params.name)/devsecops/dast/sample_report.xml $(workspaces.output.path)/output/zap_report.xml

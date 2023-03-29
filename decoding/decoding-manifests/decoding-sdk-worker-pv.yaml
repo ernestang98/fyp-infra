@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  labels:
+    worker.service: decoding-sdk-worker-volume
+  name: decoding-sdk-worker-volume
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+      storage: 10Gi
+  nfs:
+    path: "/var/nfs/general"
+    server: $MODEL_SERVER
+status: {}

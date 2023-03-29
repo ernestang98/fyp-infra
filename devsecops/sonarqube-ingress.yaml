@@ -1,0 +1,21 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: devsecops
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  name: sonarqube-ingress
+spec:
+  rules:
+  - host: fyp-ernest.store  
+    http:
+      paths:
+      - backend:
+          service:
+            name: sonarqube-sonarqube
+            port:
+              number: 9000
+        path: /sonarqube
+        pathType: Prefix

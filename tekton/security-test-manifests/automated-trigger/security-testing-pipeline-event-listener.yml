@@ -1,0 +1,11 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: devsecops-pipeline-trigger-event-listener
+spec:
+  serviceAccountName: tekton-ci-listener
+  triggers:
+    - triggerRef: github-listener-to-trigger-devsecops-pipeline
+  resources:
+    kubernetesResource:
+      serviceType: NodePort

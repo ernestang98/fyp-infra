@@ -1,0 +1,30 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    server.service: decoding-sdk-server
+  name: decoding-sdk-server
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8010
+      targetPort: 8010
+      protocol: TCP
+  selector:
+    server.service: decoding-sdk-server
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   labels:
+#     server.service: decoding-sdk-server
+#   name: decoding-sdk-server-np
+# spec:
+#   type: NodePort
+#   ports:
+#     - port: 8010
+#       nodePort: 30002
+#       protocol: TCP
+#   selector:
+#     server.service: decoding-sdk-server

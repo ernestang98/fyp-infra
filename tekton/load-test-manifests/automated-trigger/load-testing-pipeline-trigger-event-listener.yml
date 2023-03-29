@@ -1,0 +1,11 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: load-testing-pipeline-trigger-event-listener
+spec:
+  serviceAccountName: tekton-ci-listener
+  triggers:
+    - triggerRef: github-listener-to-trigger-load-testing-pipeline
+  resources:
+    kubernetesResource:
+      serviceType: NodePort

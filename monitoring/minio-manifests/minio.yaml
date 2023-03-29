@@ -1,0 +1,81 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: monitoring
+  name: minio-deployment
+spec:
+  selector:
+    matchLabels:
+      app: minio
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      # Volumes used by this deployment
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: minio
+      containers:
+      - name: minio
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        image: minio/minio
+        args:
+        - server
+        - /data
+        env:
+        - name: MINIO_ACCESS_KEY
+          value: "$MINIO_ACCESS_KEY"
+        - name: MINIO_SECRET_KEY
+          value: "$MINIO_SECRET_KEY"
+        ports:
+        - containerPort: 9000
+          hostPort: 9000
+        readinessProbe:
+          httpGet:
+            path: /minio/health/ready
+            port: 9000
+          initialDelaySeconds: 120
+          periodSeconds: 20
+        livenessProbe:
+          httpGet:
+            path: /minio/health/live
+            port: 9000
+          initialDelaySeconds: 120
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: monitoring
+  name: minio-console-service
+spec:
+  type: LoadBalancer
+  ports:
+    - name: http
+      port: 42611 # need to change
+      targetPort: 42611 # need to change
+      protocol: TCP
+  selector:
+    app: minio
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: monitoring
+  name: minio-api-service
+spec:
+  type: LoadBalancer
+  ports:
+    - name: http
+      port: 9000 # need to change
+      targetPort: 9000 # need to change
+      protocol: TCP
+  selector:
+    app: minio

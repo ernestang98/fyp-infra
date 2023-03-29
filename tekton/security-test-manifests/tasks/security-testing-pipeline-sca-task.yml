@@ -1,0 +1,33 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: sca-task
+spec:
+  workspaces:
+    - name: output
+  params:
+    - name: name
+      type: string
+  steps:
+    - name: install-and-run-dependency-check
+      image: ubuntu
+      script: |
+        #!/usr/bin/env bash
+
+        apt-get update -y
+        apt install default-jdk -y
+        apt install default-jre -y
+
+        apt install wget -y
+        wget https://github.com/jeremylong/DependencyCheck/releases/download/v8.0.1/dependency-check-8.0.1-release.zip -O dc.zip
+
+        apt install unzip -y
+        unzip dc.zip
+        cd dependency-check
+        cd bin
+
+        bash dependency-check.sh \
+          -s $(workspaces.output.path)/$(params.name) \
+          -o $(workspaces.output.path)/output \
+          -f XML
+

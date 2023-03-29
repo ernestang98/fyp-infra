@@ -1,0 +1,184 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: devsecops-pipeline
+spec:
+  params:
+  - name: DEFECT_DOJO_HOST
+    type: string
+  - name: DEFECT_DOJO_PORT
+    type: string
+  - name: DEFECT_DOJO_PASS
+    type: string
+  - name: SEND_MAIL_SECRETS
+    type: string
+  - name: SEND_MAIL_SUBJECTS
+    type: string
+  - name: SEND_MAIL_BODY
+    type: string
+  - name: SEND_MAIL_SENDER
+    type: string
+  - name: SEND_MAIL_RECIPIENTS
+    type: string
+  - name: SLACK_WEBHOOK_SECRET
+    type: string
+  - name: SLACK_MESSAGE
+    type: string
+  workspaces:
+    - name: devsecops-pipeline-ws
+      description: Workspace for sharing files between tasks
+  tasks:
+    - name: clone-repository
+      params:
+        - name: url
+          value: https://github.com/ernestang98/fyp-backup.git
+        - name: revision
+          value: master
+      taskRef:
+        name: git-clone
+      workspaces:
+        - name: output
+          workspace: devsecops-pipeline-ws
+    - name: initialisation
+      runAfter:
+        - clone-repository
+      taskRef:
+        name: init-task
+      workspaces:
+        - name: output
+          workspace: devsecops-pipeline-ws
+    - name: sast-infra-code
+      params:
+        - name: name
+          value: fyp-backup
+      runAfter:
+        - initialisation
+      taskRef:
+        name: sast-task
+      workspaces:
+        - name: output
+          workspace: devsecops-pipeline-ws
+    - name: sast-source-code
+      params:
+        - name: name
+          value: fyp-backup
+        - name: SONAR_HOST_URL
+          value: http://fyp-ernest.store/sonarqube
+        - name: SONAR_PROJECT_KEY
+          value: "SCA-ASR-Engine"
+        - name: PROJECT_VERSION
+          value: "1.0"
+        - name: SONAR_ORGANIZATION
+          value: "NTU SpeechLab"
+        - name: SONAR_LOGIN_KEY
+          value: "admin"
+        - name: SONAR_PASSWORD_KEY
+          value: "f978304264ecbc8565f044cf8572ec8e"
+      runAfter:
+        - initialisation
+      taskRef:
+        name: sonarscan-task
+        kind: Task
+      workspaces:
+        - name: source
+          workspace: devsecops-pipeline-ws
+    - name: sast-sca
+      params:
+        - name: name
+          value: fyp-backup
+      runAfter:
+        - initialisation
+      taskRef:
+        name: sca-task
+        kind: Task
+      workspaces:
+        - name: output
+          workspace: devsecops-pipeline-ws
+    
+    ### TO TEST
+    - name: build-image
+      runAfter:
+        - sast-infra-code
+        - sast-source-code
+        - sast-sca
+      taskRef:
+        name: placeholder-task
+        kind: Task
+      workspaces:
+        - name: output
+          workspace: devsecops-pipeline-ws
+
+    - name: image-scanning
+      runAfter:
+        - build-image
+      taskRef:
+        name: trivy-scanner
+        kind: Task
+      workspaces:
+        - name: manifest-dir
+          workspace: devsecops-pipeline-ws
+    
+    ### TO TEST
+    - name: deployment
+      runAfter:
+        - image-scanning
+      taskRef:
+        name: placeholder-task
+        kind: Task
+      workspaces:
+        - name: output
+          workspace: devsecops-pipeline-ws
+
+    ### TO TEST
+    - name: dast-deployment
+      params:
+        - name: name
+          value: fyp-backup
+      runAfter:
+        - deployment
+      taskRef:
+        name: dast-task
+        kind: Task
+      workspaces:
+        - name: output
+          workspace: devsecops-pipeline-ws
+
+  finally:
+    - name: teardown
+      params:
+        - name: DEFECT_DOJO_HOST
+          value: $(params.DEFECT_DOJO_HOST)
+        - name: DEFECT_DOJO_PORT
+          value: $(params.DEFECT_DOJO_PORT)
+        - name: DEFECT_DOJO_PASS
+          value: $(params.DEFECT_DOJO_PASS)
+        - name: DEFECT_DOJO_PATH
+          value: fyp-backup
+      taskRef:
+        name: teardown-task
+        kind: Task
+      workspaces:
+        - name: output
+          workspace: devsecops-pipeline-ws
+    - name: notify-team-via-email
+      params:
+        - name: server
+          value: $(params.SEND_MAIL_SECRETS)
+        - name: subject
+          value: $(params.SEND_MAIL_SUBJECTS)
+        - name: body
+          value: $(params.SEND_MAIL_BODY)
+        - name: sender
+          value: $(params.SEND_MAIL_SENDER)
+        - name: recipients
+          value: $(params.SEND_MAIL_RECIPIENTS)
+      taskRef:
+        name: sendmail
+    - name: notify-team-via-slack
+      params:
+        - name: webhook-secret
+          value: $(params.SLACK_WEBHOOK_SECRET)
+        - name: message
+          value: $(params.SLACK_MESSAGE)
+      taskRef:
+        name: send-to-webhook-slack

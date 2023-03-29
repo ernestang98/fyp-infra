@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: falco-falcosidekick-ui-np
+  namespace: devsecops
+spec:
+  ports:
+    - port: 2802
+      nodePort: 30004
+      protocol: TCP
+  type: NodePort
+  selector:
+    app.kubernetes.io/instance: falco-ui
+    app.kubernetes.io/name: falcosidekick-ui

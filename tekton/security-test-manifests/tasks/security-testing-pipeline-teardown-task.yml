@@ -1,0 +1,64 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: teardown-task
+spec:
+  workspaces:
+    - name: output
+  params:
+    - name: DEFECT_DOJO_HOST
+      type: string
+    - name: DEFECT_DOJO_PORT
+      type: string
+    - name: DEFECT_DOJO_PASS
+      type: string
+    - name: DEFECT_DOJO_PATH
+      type: string
+  steps:
+    - name: send-report
+      image: ubuntu
+      script: |
+        #!/usr/bin/env bash
+        apt update -y
+        apt install python3 -y
+        apt install python3-pip -y
+
+        pip3 install requests
+
+        cmd="python3 $(workspaces.output.path)/$(params.DEFECT_DOJO_PATH)/devsecops/defectDojo/send-report.py"
+        
+        if [[ -f $(workspaces.output.path)/output/custom-semgrep-rules-report.json ]] ; then
+            cmd="$cmd -ds=$(workspaces.output.path)/output/custom-semgrep-rules-report.json"
+        fi
+
+        if [[ -f $(workspaces.output.path)/output/default-semgrep-rules-report.json ]] ; then
+            cmd="$cmd -cs=$(workspaces.output.path)/output/default-semgrep-rules-report.json"
+        fi
+
+        if [[ -f $(workspaces.output.path)/output/checkov-report.json ]] ; then
+            cmd="$cmd -c=$(workspaces.output.path)/output/checkov-report.json"
+        fi
+
+        if [[ -f $(workspaces.output.path)/output/trivy-report.json ]] ; then
+            cmd="$cmd -t=$(workspaces.output.path)/output/trivy-report.json"
+        fi
+
+        if [[ -f $(workspaces.output.path)/output/dependency-check-report.xml ]] ; then
+            cmd="$cmd -dc=$(workspaces.output.path)/output/dependency-check-report.xml"
+        fi
+
+        if [[ -f $(workspaces.output.path)/output/sonarqube_report.html ]] ; then
+            cmd="$cmd -ss=$(workspaces.output.path)/output/sonarqube_report.html"
+        fi
+
+        if [[ -f $(workspaces.output.path)/output/zap_report.xml ]] ; then
+            cmd="$cmd -z=$(workspaces.output.path)/output/zap_report.xml"
+        fi
+
+        cmd="$cmd -i=$(params.DEFECT_DOJO_HOST) -p=$(params.DEFECT_DOJO_PORT) -pa=$(params.DEFECT_DOJO_PASS)"
+
+        echo "Running '$cmd'"
+
+        #cmd="ls $(workspaces.output.path)/output"
+
+        eval "$cmd"

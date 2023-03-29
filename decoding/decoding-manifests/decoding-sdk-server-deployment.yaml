@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: decoding-sdk-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      server.service: decoding-sdk-server
+  template:
+    metadata:
+      labels:
+        server.service: decoding-sdk-server
+    spec:
+      containers:
+        - args:
+            - /home/speechuser/start_master.sh
+            - -p
+            - "8010"
+          image: lyvt/decoding-sdk:1.2
+          imagePullPolicy: Always
+          name: decoding-sdk-server
+          ports:
+            - containerPort: 8010
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+            requests:
+              cpu: 1000m
+              memory: 2Gi
+      restartPolicy: Always

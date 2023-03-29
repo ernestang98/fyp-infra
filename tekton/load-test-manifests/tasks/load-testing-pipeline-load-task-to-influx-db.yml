@@ -1,0 +1,46 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: load-task-to-influx-db
+spec:
+  params:
+  - name: SERVER_HOST
+    type: string
+  - name: SERVER_PORT
+    type: string
+  - name: INFLUX_DB_HOST
+    type: string
+  - name: INFLUX_DB_PORT
+    type: string
+  - name: INFLUX_DB_USERNAME
+    type: string
+  - name: INFLUX_DB_PASSWORD
+    type: string
+  - name: AUDIO_DURATION
+    type: string
+  - name: PATH
+    type: string
+  workspaces:
+    - name: output
+  steps:
+    - name: install-and-run-k6
+      image: ubuntu
+      script: |
+        #!/usr/bin/env bash
+
+        apt update -y && apt upgrade -y
+        apt install curl -y
+        curl -sL https://github.com/grafana/k6/releases/download/v0.41.0/k6-v0.41.0-linux-amd64.deb > package.deb
+        dpkg -i package.deb
+
+        if [[ -z "$(params.SERVER_HOST)" ]]; then
+            exit 1
+        fi
+        if [[ -z "$(params.SERVER_PORT)" ]]; then
+            exit 1
+        fi
+
+        mkdir reports
+        mkdir $(workspaces.output.path)/reports 
+        K6_INFLUXDB_USERNAME=$(params.INFLUX_DB_USERNAME) K6_INFLUXDB_PASSWORD=$(params.INFLUX_DB_PASSWORD) k6 run -e HOST=$(params.SERVER_HOST) -e AUDIO_DURATION=$(params.AUDIO_DURATION) -e PORT=$(params.SERVER_PORT) $(workspaces.output.path)/$(params.PATH)/devsecops/k6/script.js --out influxdb=http://$(params.INFLUX_DB_HOST):$(params.INFLUX_DB_PORT)/monitoring
+        mv reports/summary.html $(workspaces.output.path)/reports/summary.html
